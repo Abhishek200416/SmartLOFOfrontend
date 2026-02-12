@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Filter, MapPin, Calendar, Package } from 'lucide-react';
@@ -20,11 +20,7 @@ const Dashboard = () => {
 
   const categories = ['Electronics', 'Accessories', 'Documents', 'Clothing', 'Keys', 'Bags', 'Other'];
 
-  useEffect(() => {
-    fetchItems();
-  }, [typeFilter, categoryFilter]);
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     try {
       const params = {};
       if (typeFilter !== 'all') params.type = typeFilter;
@@ -38,7 +34,12 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [typeFilter, categoryFilter, searchTerm]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
   const handleSearch = () => {
     fetchItems();

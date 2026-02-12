@@ -15,20 +15,19 @@ const ItemDetail = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchItem = async () => {
+      try {
+        const response = await api.get(`/items/${id}`);
+        setItem(response.data);
+      } catch (error) {
+        toast.error('Failed to fetch item details');
+        navigate('/dashboard');
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchItem();
-  }, [id]);
-
-  const fetchItem = async () => {
-    try {
-      const response = await api.get(`/items/${id}`);
-      setItem(response.data);
-    } catch (error) {
-      toast.error('Failed to fetch item details');
-      navigate('/dashboard');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [id, navigate]);
 
   if (loading) {
     return (
