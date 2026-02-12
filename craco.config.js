@@ -51,8 +51,15 @@ const webpackConfig = {
 
       // Disable React Refresh in production to prevent runtime error
       if (process.env.NODE_ENV === 'production') {
+        // Disable Fast Refresh
+        process.env.FAST_REFRESH = 'false';
+
+        // Filter out React Refresh plugins
         webpackConfig.plugins = webpackConfig.plugins.filter(p =>
-          p.constructor && p.constructor.name !== 'ReactRefreshPlugin'
+          p.constructor && (
+            p.constructor.name !== 'ReactRefreshPlugin' &&
+            p.constructor.name !== 'ReactRefreshWebpackPlugin'
+          )
         );
       }
 
@@ -78,8 +85,8 @@ const webpackConfig = {
   },
 };
 
-// Only add babel metadata plugin during dev server
-if (config.enableVisualEdits && babelMetadataPlugin) {
+// Only add babel metadata plugin during dev server start
+if (config.enableVisualEdits && babelMetadataPlugin && isStart) {
   webpackConfig.babel = {
     plugins: [babelMetadataPlugin],
   };
