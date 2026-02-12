@@ -49,6 +49,13 @@ const webpackConfig = {
     },
     configure: (webpackConfig) => {
 
+      // Disable React Refresh in production to prevent runtime error
+      if (process.env.NODE_ENV === 'production') {
+        webpackConfig.plugins = webpackConfig.plugins.filter(p =>
+          p.constructor && p.constructor.name !== 'ReactRefreshPlugin'
+        );
+      }
+
       // Add ignored patterns to reduce watched directories
         webpackConfig.watchOptions = {
           ...webpackConfig.watchOptions,
