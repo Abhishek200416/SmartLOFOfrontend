@@ -10,7 +10,7 @@ const isStart = process.env.npm_lifecycle_event === "start";
 // Environment variable overrides
 const config = {
   enableHealthCheck: process.env.ENABLE_HEALTH_CHECK === "true",
-  enableVisualEdits: isDevServer && isStart, // Only enable during dev server start
+  enableVisualEdits: false, // Temporarily disabled to prevent React Refresh conflicts
 };
 
 // Conditionally load visual edits modules only in dev mode
@@ -86,11 +86,12 @@ const webpackConfig = {
 };
 
 // Only add babel metadata plugin during dev server start
-if (config.enableVisualEdits && babelMetadataPlugin && isStart) {
-  webpackConfig.babel = {
-    plugins: [babelMetadataPlugin],
-  };
-}
+// Temporarily disabled to prevent React Refresh conflicts
+// if (config.enableVisualEdits && babelMetadataPlugin && isStart) {
+//   webpackConfig.babel = {
+//     plugins: [babelMetadataPlugin],
+//   };
+// }
 
 webpackConfig.devServer = (devServerConfig) => {
   // Apply visual edits dev server setup only if enabled
