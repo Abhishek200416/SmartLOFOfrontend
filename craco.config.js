@@ -2,27 +2,13 @@
 const path = require("path");
 require("dotenv").config();
 
-// Check if we're in development/preview mode (not production build)
-// Craco sets NODE_ENV=development for start, NODE_ENV=production for build
-const isDevServer = process.env.NODE_ENV === "development";
-const isStart = process.env.npm_lifecycle_event === "start";
-
-// Environment variable overrides
+// Environment config
 const config = {
   enableHealthCheck: process.env.ENABLE_HEALTH_CHECK === "true",
-  enableVisualEdits: false, // Temporarily disabled to prevent React Refresh conflicts
+  enableVisualEdits: false,
 };
 
-// Conditionally load visual edits modules only in dev mode
-let setupDevServer;
-let babelMetadataPlugin;
-
-if (config.enableVisualEdits) {
-  setupDevServer = require("./plugins/visual-edits/dev-server-setup");
-  babelMetadataPlugin = require("./plugins/visual-edits/babel-metadata-plugin");
-}
-
-// Conditionally load health check modules only if enabled
+// Optional plugins
 let WebpackHealthPlugin;
 let setupHealthEndpoints;
 let healthPluginInstance;
@@ -33,7 +19,7 @@ if (config.enableHealthCheck) {
   healthPluginInstance = new WebpackHealthPlugin();
 }
 
-const webpackConfig = {
+module.exports = {
   eslint: {
     configure: {
       extends: ["plugin:react-hooks/recommended"],
@@ -43,84 +29,62 @@ const webpackConfig = {
       },
     },
   },
+
   webpack: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      "@": path.resolve(__dirname, "src"),
     },
+
     configure: (webpackConfig) => {
+      const webpack = require("webpack");
 
-      // Disable React Refresh in production to prevent runtime error
-      if (process.env.NODE_ENV === 'production') {
-        // Disable Fast Refresh
-        process.env.FAST_REFRESH = 'false';
+      // ✅ FORCE DEV MODE (prevents NODE_ENV conflicts)
+      webpackConfig.plugins.push(
+        new webpack.DefinePlugin({
+          "process.env.NODE_ENV": JSON.stringify("development"),
+        })
+      );
 
-        // Filter out React Refresh plugins
-        webpackConfig.plugins = webpackConfig.plugins.filter(p =>
-          p.constructor && (
-            p.constructor.name !== 'ReactRefreshPlugin' &&
-            p.constructor.name !== 'ReactRefreshWebpackPlugin'
-          )
-        );
-      }
-
-      // Add ignored patterns to reduce watched directories
-        webpackConfig.watchOptions = {
-          ...webpackConfig.watchOptions,
-          ignored: [
-            '**/node_modules/**',
-            '**/.git/**',
-            '**/build/**',
-            '**/dist/**',
-            '**/coverage/**',
-            '**/public/**',
+      // ✅ Optimize file watching (safe)
+      webpackConfig.watchOptions = {
+        ...webpackConfig.watchOptions,
+        ignored: [
+          "**/node_modules/**",
+          "**/.git/**",
+          "**/build/**",
+          "**/dist/**",
+          "**/coverage/**",
+          "**/public/**",
         ],
       };
 
-      // Add health check plugin to webpack if enabled
+      // ✅ Health plugin (optional)
       if (config.enableHealthCheck && healthPluginInstance) {
         webpackConfig.plugins.push(healthPluginInstance);
       }
+
       return webpackConfig;
     },
   },
+
+  devServer: (devServerConfig) => {
+    // ✅ Health endpoints (optional)
+    if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
+      const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
+
+      devServerConfig.setupMiddlewares = (middlewares, devServer) => {
+        if (originalSetupMiddlewares) {
+          middlewares = originalSetupMiddlewares(middlewares, devServer);
+        }
+
+        setupHealthEndpoints(devServer, healthPluginInstance);
+        return middlewares;
+      };
+    }
+
+    // ❌ DO NOT disable websocket (breaks React Refresh)
+    // devServerConfig.webSocketServer = false;
+
+    return devServerConfig;
+  },
 };
-
-// Only add babel metadata plugin during dev server start
-// Temporarily disabled to prevent React Refresh conflicts
-// if (config.enableVisualEdits && babelMetadataPlugin && isStart) {
-//   webpackConfig.babel = {
-//     plugins: [babelMetadataPlugin],
-//   };
-// }
-
-webpackConfig.devServer = (devServerConfig) => {
-  // Apply visual edits dev server setup only if enabled
-  if (config.enableVisualEdits && setupDevServer) {
-    devServerConfig = setupDevServer(devServerConfig);
-  }
-
-  // Add health check endpoints if enabled
-  if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
-    const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
-
-    devServerConfig.setupMiddlewares = (middlewares, devServer) => {
-      // Call original setup if exists
-      if (originalSetupMiddlewares) {
-        middlewares = originalSetupMiddlewares(middlewares, devServer);
-      }
-
-      // Setup health endpoints
-      setupHealthEndpoints(devServer, healthPluginInstance);
-
-      return middlewares;
-    };
-  }
-
-  // Disable WebSocket connections for hot reloading when using tunnel
-  // This prevents connection errors when backend is on a different host
-  devServerConfig.webSocketServer = false;
-
-  return devServerConfig;
-};
-
-module.exports = webpackConfig;
