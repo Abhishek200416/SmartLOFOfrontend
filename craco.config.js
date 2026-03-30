@@ -8,7 +8,7 @@ const config = {
   enableVisualEdits: false,
 };
 
-// Optional plugins
+// Optional health plugins
 let WebpackHealthPlugin;
 let setupHealthEndpoints;
 let healthPluginInstance;
@@ -36,16 +36,11 @@ module.exports = {
     },
 
     configure: (webpackConfig) => {
-      const webpack = require("webpack");
+      // ✅ DO NOT touch NODE_ENV
+      // ✅ DO NOT remove React Refresh
+      // ✅ Keep dev server behavior intact
 
-      // ✅ FORCE DEV MODE (prevents NODE_ENV conflicts)
-      webpackConfig.plugins.push(
-        new webpack.DefinePlugin({
-          "process.env.NODE_ENV": JSON.stringify("development"),
-        })
-      );
-
-      // ✅ Optimize file watching (safe)
+      // Optimize watch performance
       webpackConfig.watchOptions = {
         ...webpackConfig.watchOptions,
         ignored: [
@@ -58,7 +53,7 @@ module.exports = {
         ],
       };
 
-      // ✅ Health plugin (optional)
+      // Optional health plugin
       if (config.enableHealthCheck && healthPluginInstance) {
         webpackConfig.plugins.push(healthPluginInstance);
       }
@@ -68,7 +63,7 @@ module.exports = {
   },
 
   devServer: (devServerConfig) => {
-    // ✅ Health endpoints (optional)
+    // Optional health endpoints
     if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
       const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
 
@@ -82,7 +77,7 @@ module.exports = {
       };
     }
 
-    // ❌ DO NOT disable websocket (breaks React Refresh)
+    // ✅ IMPORTANT: DO NOT disable websocket
     // devServerConfig.webSocketServer = false;
 
     return devServerConfig;
